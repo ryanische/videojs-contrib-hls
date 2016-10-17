@@ -246,11 +246,20 @@ export class MasterPlaylistController extends videojs.EventTarget {
    * @private
    */
   setupMasterPlaylistLoaderListeners_() {
+    const requestTimeout = () => {
+      // If we don't have any more available playlists, we don't want to
+      // timeout the request.
+      if (this.masterPlaylistLoader_.isLowestEnabledRendition_()) {
+        return 0;
+      }
+
+      return (this.masterPlaylistLoader_.targetDuration * 1.5) * 1000;
+    };
+
     this.masterPlaylistLoader_.on('loadedmetadata', () => {
       let media = this.masterPlaylistLoader_.media();
-      let requestTimeout = (this.masterPlaylistLoader_.targetDuration * 1.5) * 1000;
 
-      this.requestOptions_.timeout = requestTimeout;
+      this.requestOptions_.timeout = requestTimeout();
 
       // if this isn't a live video and preload permits, start
       // downloading segments
@@ -317,17 +326,10 @@ export class MasterPlaylistController extends videojs.EventTarget {
 
     this.masterPlaylistLoader_.on('mediachange', () => {
       let media = this.masterPlaylistLoader_.media();
-      let requestTimeout = (this.masterPlaylistLoader_.targetDuration * 1.5) * 1000;
       let activeAudioGroup;
       let activeTrack;
 
-      // If we don't have any more available playlists, we don't want to
-      // timeout the request.
-      if (this.masterPlaylistLoader_.isLowestEnabledRendition_()) {
-        this.requestOptions_.timeout = 0;
-      } else {
-        this.requestOptions_.timeout = requestTimeout;
-      }
+      this.requestOptions_.timeout = requestTimeout();
 
       // TODO: Create a new event on the PlaylistLoader that signals
       // that the segments have changed in some way and use that to
